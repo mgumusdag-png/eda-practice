@@ -1,0 +1,71 @@
+---
+title: "HW2 - Tidy Data"
+author: "Ata Gümüşdağ"
+format: html
+---
+
+# Notes
+
+## Wide to Long
+
+In this example, the data starts in wide format. Each subject has its own column.
+
+```{r}
+library(tidyverse)
+
+grades_wide <- tibble(
+  student = c("John", "Sarah"),
+  math = c(90, 95),
+  science = c(85, 92),
+  english = c(88, 91)
+)
+
+grades_wide
+
+grades_long <- grades_wide |>
+  pivot_longer(
+    cols = c(math, science, english),
+    names_to = "subject",
+    values_to = "score"
+  )
+
+grades_long
+```
+
+The `pivot_longer()` function changes the data from wide format to long format. Instead of having a different column for each subject, the subjects are put into one column called `subject`, and their grades are put into the `score` column.
+
+## Long to Wide
+
+Now let's go the other direction. In this example, the data starts in long format: each row is a single observation (one student, one subject, one score), and there's a `subject` column whose values will become new column names.
+
+```{r}
+sales_long <- tibble(
+  region = c("North", "North", "South", "South"),
+  quarter = c("Q1", "Q2", "Q1", "Q2"),
+  revenue = c(120, 150, 90, 110)
+)
+
+sales_long
+
+sales_wide <- sales_long |>
+  pivot_wider(
+    names_from = quarter,
+    values_from = revenue
+  )
+
+sales_wide
+```
+
+The `pivot_wider()` function does the opposite of `pivot_longer()`. It takes the values in the `quarter` column and turns each unique value ("Q1", "Q2") into its own column, using `revenue` to fill in the values. This is useful when you want one row per region and you want to eyeball or compare values across quarters side by side, which is harder to do when everything is stacked in long format.
+
+Going back and forth between `grades_long`/`grades_wide` and `sales_long`/`sales_wide` really drove home that "long" and "wide" aren't fundamentally different pieces of data - they're the same information, just organized differently depending on what you want to do with it (plotting and modeling tend to prefer long/tidy data, while a human reading a table often prefers wide).
+
+# Reflection
+
+Before this assignment, I used to think "tidy" just meant a dataset that looked neat or was free of missing values, but now I understand it has a much more precise definition: each variable is a column, each observation is a row, and each type of observational unit forms its own table. That framing was clarifying because it turns "is this data usable?" from a vague aesthetic judgment into a concrete checklist I can actually apply before I start analyzing something.
+
+What I found most interesting was realizing how much the "right" shape of a dataset depends on what you're about to do with it. Long/tidy format is great for `ggplot2` and for `dplyr` verbs like `group_by()` and `summarize()`, because you can map a single column directly to an aesthetic like color or facet. But wide format is often better for a summary table that a person needs to read, or for certain kinds of matrix-style computations. So "tidy" isn't a universally superior format - it's the format that makes the *next* operation (usually a `group_by`/`summarize`/plotting step) simple, and `pivot_longer()`/`pivot_wider()` are really just tools for adapting your data's shape to the tool you're about to hand it to.
+
+This connects to a project I've worked on before where I had survey data with one column per question (very wide) and kept writing repetitive code to compute the same statistic for each question separately. Thinking about it now, `pivot_longer()` on all the question columns would have let me compute all those statistics in a single `group_by(question) |> summarize(...)` call instead of copy-pasting code for each column - a much more "tidy" and less error-prone approach.
+
+One thing I'm still a little unsure about: when a dataset has multiple "keys" that could reasonably be pivoted on (for example, both `subject` and `semester` in a gradebook), how do you decide which one should stay as an identifying column versus which one should become the column names when you pivot wider? Is there a rule of thumb, or does it just come down to what question you're trying to answer with the table?
